@@ -14,10 +14,13 @@ from apps.accounts.utils import (
 from utils.models import (
     CommonInfo,
     Address,
+    OTP,
 )
 
+import uuid
 
 class User(AbstractUser):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4,editable=False)
     full_name = models.CharField(max_length=100)
     phone = models.CharField(
         max_length=15, null=False, unique=True, validators=[validate_mobile_number]
@@ -29,6 +32,8 @@ class User(AbstractUser):
     )
     username = models.CharField(max_length=150,
                                 unique=True,)
+    otp = models.CharField(null=True, blank=True, max_length=6)
+    otp_used = models.BooleanField(default=False)
     role = models.CharField(
         max_length=20,
         choices=ROLE_CHOICES,
@@ -38,12 +43,17 @@ class User(AbstractUser):
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["full_name", "username", "phone", ]
-
+    
     objects = CustomUserManager()
 
     def __str__(self):
         return self.email
 
+
+
+        
+        
+        
 class Supplier(CommonInfo,Address):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
     supplier_code = models.IntegerField()
@@ -78,7 +88,7 @@ class Warehouse(models.Model):
         return self.name
 
 
-class Biller(CommonInfo, Address):
+class Biller(CommonInfo, Address, OTP):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
     NID = models.CharField(max_length=13)
     warehouse = models.ForeignKey(
@@ -90,3 +100,10 @@ class Biller(CommonInfo, Address):
 
     def __str__(self):
         return self.user.full_name
+
+
+
+
+
+
+    

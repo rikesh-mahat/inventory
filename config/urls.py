@@ -19,6 +19,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 from apps.accounts.routers import router as account_router
+# from apps.accounts.views import ForgotPasswordView
 
 router = DefaultRouter()
 
@@ -28,4 +29,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api-auth/', include("rest_framework.urls")),
     path('api/', include(router.urls)),
+    # path('', include('apps.accounts.urls')),
+    # path('api/forgot-password/<uuid:pk>', ForgotPasswordView.as_view(), name='forgot-password')
 ]

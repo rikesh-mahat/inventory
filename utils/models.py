@@ -31,3 +31,11 @@ class Address(models.Model):
     
     class Meta:
         abstract=True
+        
+class OTP(models.Model):
+    otp = models.CharField(max_length=6, null=True)
+    otp_creation_at = models.DateTimeField(null=True)
+    otp_expiration_at = models.DateTimeField(null=True)
+    
+    class Meta:
+        abstract = True
