@@ -8,11 +8,10 @@ from apps.accounts.models import (
     Customer,
     Biller,
     Supplier,
-    Warehouse,
     OTP,
 )
 
-
+from apps.store.models import Warehouse
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True,

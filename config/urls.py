@@ -19,11 +19,13 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 from apps.accounts.routers import router as account_router
+from apps.products.routers import router as product_router
 # from apps.accounts.views import ForgotPasswordView
 
 router = DefaultRouter()
 
 router.registry.extend(account_router.registry)
+router.registry.extend(product_router.registry)
 
 urlpatterns = [
     path('admin/', admin.site.urls),

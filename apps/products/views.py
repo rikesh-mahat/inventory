@@ -20,7 +20,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from rest_framework.response import Response
 from rest_framework import status
-from utils.permissions import SupplierPermssion
+from utils.permissions import SupplierPermission
 from rest_framework.permissions import (
     BasePermission,
     AllowAny,
@@ -107,8 +107,8 @@ class ProductViewSet(ModelViewSet):
     permission_classes_by_action = {
         "list": [AllowAny],
         "retrieve": [IsAuthenticated],
-        "create": [IsAdminUser | SupplierPermssion],
-        "update": [IsAuthenticated | SupplierPermssion],
+        "create": [IsAdminUser | SupplierPermission],
+        "update": [IsAuthenticated | SupplierPermission],
     }
 
     def get_permissions(self):

@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 from apps.accounts.managers import CustomUserManager
+from apps.store.models import Warehouse
 from apps.accounts.constant import (
     GENDER_CHOICES,
     ROLE_CHOICES,
@@ -75,15 +76,15 @@ class Customer(CommonInfo,Address):
         return self.created_by.full_name
 
 
-class Warehouse(models.Model):
-    name = models.CharField(max_length=100, blank=True, null=True)
-    phone = models.CharField(
-        max_length=15, null=False, unique=True, validators=[validate_mobile_number]
-    )
-    email = models.EmailField(unique=True)
+# class Warehouse(models.Model):
+#     name = models.CharField(max_length=100, blank=True, null=True)
+#     phone = models.CharField(
+#         max_length=15, null=False, unique=True, validators=[validate_mobile_number]
+#     )
+#     email = models.EmailField(unique=True)
 
-    def __str__(self):
-        return self.name
+#     def __str__(self):
+#         return self.name
 
 
 class Biller(CommonInfo, Address, OTP):

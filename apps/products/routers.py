@@ -7,7 +7,7 @@ from apps.products.views import (
 )
 
 router = DefaultRouter()
-router.register("product", ProductViewSet)
-router.register("brand", BrandViewSet)
+router.register("products", ProductViewSet)
+router.register("brands", BrandViewSet)
 router.register("cateogry", CategoryViewSet)
-router.register("unit", UnitViewSet)
+router.register("units", UnitViewSet)
