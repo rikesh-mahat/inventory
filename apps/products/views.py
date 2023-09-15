@@ -28,6 +28,7 @@ from rest_framework.permissions import (
     IsAuthenticated,
 )
 
+from apps.store.models import Warehouse
 # Create your views here.
 
 
@@ -124,6 +125,30 @@ class ProductViewSet(ModelViewSet):
         if self.action == "retrieve":
             return GETProductSerializer
         return super().get_serializer_class()
+    
+    
+   
+        
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        
+        # getting the warehouse from the request data
+        warehouse_data = request.data.pop("warehouse")
+        warehouse_ids_list = []  # for storing the id of the warehouses
+        
+        # loop throught the warehouses 
+        for warehouse in warehouse_data:
+            # create an warehouse if id isn't passed or update an warehouse if id is passed
+            warehouse_instance, created = Warehouse.objects.update_or_create(id = warehouse.get('id'),defaults=warehouse)
+            
+            # append the created or updated warehouse id in our list
+            warehouse_ids_list.append(warehouse_instance.id)
+            
+        # finally set the ids of the warehouse in our manytomany field relatioship
+        instance.warehouse.set(warehouse_ids_list)
+        serializer = ProductSerializer(instance)
+        
+        return Response({"updated data" : serializer.data})
 
 
 
