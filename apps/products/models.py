@@ -1,5 +1,5 @@
 from django.db import models
-from apps.products.constant import (
+from apps.products.constants import (
     PRODUCT_TYPE_CHOICES,
     PRODUCT_TAX,
     TAX_METHOD,
