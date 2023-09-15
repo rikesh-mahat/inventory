@@ -7,7 +7,7 @@ from apps.accounts.constant import (
     ROLE_CHOICES,
     CUSTOMER_GROUP_CHOICES,
 )
-from apps.accounts.utils import (
+from utils.validations import (
     validate_mobile_number,
     valid_emails,
 )

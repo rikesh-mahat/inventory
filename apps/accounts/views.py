@@ -32,7 +32,7 @@ from apps.accounts.serializers import (
     ForgotPasswordSerializer,
     EmailSerializer,
 )
-from apps.accounts.pagination import MyPagination
+from utils.paginations import MyPagination
 from utils.permissions import SupplierPermission
 
 
