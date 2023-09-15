@@ -1,6 +1,11 @@
 from django.contrib import admin
-from apps.accounts.models import User
+from apps.accounts.models import (User, OTP)
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ['email', 'username', 'phone', 'otp']
+    list_display = ['email', 'username', 'phone']
+    
+    
+@admin.register(OTP)
+class OTPAdmin(admin.ModelAdmin):
+    list_display = ['otp', 'user']

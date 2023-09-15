@@ -9,13 +9,15 @@ from rest_framework import filters
 from rest_framework.views import APIView
 from utils.emails import send_otp_email
 from django.shortcuts import get_object_or_404
-
+import pyotp
+from decouple import config
 from apps.accounts.models import (
     User,
     Customer,
     Supplier,
     Biller,
     Warehouse,
+    OTP,
 )
 from apps.accounts.serializers import (
     UserSerializer,
@@ -41,8 +43,10 @@ class CommonModelViewset(ModelViewSet):
 class UserViewSet(CommonModelViewset):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["full_name" ]
+    
+    
+    search_fields = ['full_name', 'phone']
+    ordering_fields = ['full_name']
     permission_classes = [IsAdminUser]
     
     def get_serializer_class(self):
@@ -127,21 +131,30 @@ class ForgotPasswordView(ModelViewSet):
         
         # getting the user after validating email 
         user = get_object_or_404(User, email=email)
-        otp = generate_otp()
-        user.otp = otp
-        user.save()
-        send_otp_email(user.email, otp)
+        # otp_for_user = generate_otp()
+        totp = pyotp.TOTP(config('TOTP_SECRET_KEY'), interval=120)
+        otp_for_user = totp.now()
+        print(totp.verify(otp_for_user))
+        # creatin a otp for the user
+        try:
+            user_otp = OTP.objects.get(user=user)
+            user_otp.otp = otp_for_user
+            user_otp.save()
+        except OTP.DoesNotExist:
+            user_otp = OTP.objects.create(user=user, otp=otp_for_user)
+        send_otp_email(user.email, otp_for_user)
         
         
     
-        return Response({"success"  : "Email has been sent successfully", "data" : {"email" : user.id}}, status= status.HTTP_201_CREATED)
+        return Response({"success"  : "Email has been sent successfully", "data" : {"otp" : otp_for_user}}, status= status.HTTP_201_CREATED)
        
-    @action(methods = ['POST'], detail=True, url_path = 'change-password', permission_classes=[AllowAny])
-    def change_password(self, request, pk=None):
-        
-        user = get_object_or_404(User, id = pk)
+    @action(methods = ['POST'], detail=False, url_path = 'change-password', permission_classes=[AllowAny])
+    def change_password(self, request):
+        pk = request.data.get('otp')
+        otp = get_object_or_404(OTP, otp = pk)
+        user = otp.user
         # validating otp, password and getting the new password from the user
-        forgot_password_serializer = ForgotPasswordSerializer(data = request.data, context={'user': user})
+        forgot_password_serializer = ForgotPasswordSerializer(data = request.data, context={'otp': otp})
         forgot_password_serializer.is_valid(raise_exception=True)
         password = forgot_password_serializer.validated_data['password']
         

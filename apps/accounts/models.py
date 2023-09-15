@@ -32,8 +32,6 @@ class User(AbstractUser):
     )
     username = models.CharField(max_length=150,
                                 unique=True,)
-    otp = models.CharField(null=True, blank=True, max_length=6)
-    otp_used = models.BooleanField(default=False)
     role = models.CharField(
         max_length=20,
         choices=ROLE_CHOICES,
@@ -102,7 +100,12 @@ class Biller(CommonInfo, Address, OTP):
         return self.user.full_name
 
 
-
+class OTP(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    otp = models.CharField(max_length=8)
+    created_at = models.DateTimeField(auto_now=True)
+    
+    
 
 
 

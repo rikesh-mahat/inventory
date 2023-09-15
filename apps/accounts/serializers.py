@@ -1,11 +1,15 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
+from decouple import config
+import pyotp
+
 from apps.accounts.models import (
     User,
     Customer,
     Biller,
     Supplier,
     Warehouse,
+    OTP,
 )
 
 
@@ -46,7 +50,6 @@ class UserSerializer(serializers.ModelSerializer):
         if password is not None:
             user.set_password(password)
         user.save()
-
         return user
 
 
@@ -168,12 +171,16 @@ class ForgotPasswordSerializer(serializers.ModelSerializer):
     password1 = serializers.CharField(write_only=True)
     
     class Meta:
-        model = User
+        model = OTP
         fields = ['otp', 'password', 'password1']
         
     def validate_otp(self, value):
-        user = self.context['user']
-        if user.otp != value:
+        otp = self.context['otp']
+        totp = pyotp.TOTP(config('TOTP_SECRET_KEY'))
+        
+        if not totp.verify(otp):
+            raise serializers.ValidationError("The otp has expired")
+        if  otp.otp!= value:
             raise serializers.ValidationError("otp doesn't match")
         return value
     
@@ -182,3 +189,8 @@ class ForgotPasswordSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('password do not match')
         return data
     
+    
+# class OTPSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = OTP
+#         fields = ['user', 'otp', 'created_at']
