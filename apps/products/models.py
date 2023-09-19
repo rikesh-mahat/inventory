@@ -4,13 +4,18 @@ from apps.products.constants import (
     PRODUCT_TAX,
     TAX_METHOD,
     BARCODE_PAPER_SIZE,
+    ORDER_TAX,
+    SALE_STATUS,
+    TYPE,
 )
 from utils.models import CommonInfo
 from apps.store.models import Warehouse
-from apps.accounts.models import User
-from django.contrib.auth import get_user_model
+from apps.accounts.models import User, Customer, Supplier, Biller
+
 
 from utils.threads import get_request
+
+
 # Create your models here.
 class Brand(CommonInfo):
     brand_name = models.CharField(max_length=30)
@@ -58,12 +63,9 @@ class Product(CommonInfo):
     product_image = models.ImageField(upload_to="profile/", blank=True, null=True)
     featured = models.BooleanField(default=False)
     price_difference_in_warehouse = models.BooleanField(default=True)
-    warehouse = models.ManyToManyField(Warehouse)
+    warehouse = models.ManyToManyField(Warehouse, blank=True)
     user = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null = True,
-        related_name="product_user"
+        User, on_delete=models.SET_NULL, null=True, related_name="product_user"
     )
     has_expiry_date = models.BooleanField(default=True)
     add_promotional_sale = models.BooleanField(default=True)
@@ -73,14 +75,11 @@ class Product(CommonInfo):
     def save(self, *args, **kwargs):
         current_user = get_request().user
         self.user = current_user
-        self.created_by  =current_user
+        self.created_by = current_user
         super(Product, self).save(*args, **kwargs)
-        
 
     def __str__(self) -> str:
-        return self.created_by.full_name 
-    
-    
+        return self.product_name
 
 
 class Barcode(CommonInfo):
@@ -88,3 +87,113 @@ class Barcode(CommonInfo):
         Product, on_delete=models.CASCADE, related_name="barcode_info"
     )
     papersize = models.CharField(choices=BARCODE_PAPER_SIZE, max_length=20)
+
+
+class Purchase(CommonInfo):
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.CASCADE,
+        related_name="%(app_label)s_%(class)s_warehouse",
+    )
+    supplier = models.ForeignKey(
+        Supplier,
+        on_delete=models.CASCADE,
+        related_name="%(app_label)s_%(class)s_supplier",
+    )
+    product = models.ManyToManyField(Product)
+    order_tax = models.CharField(choices=ORDER_TAX, max_length=10)
+    order_discount = models.FloatField()
+    shipping = models.FloatField()
+    sales_status = models.CharField(choices=SALE_STATUS, max_length=15)
+    purchase_note = models.TextField()
+    
+    def __str__(self):
+        return self.product.product_name
+
+
+class Sales(CommonInfo):
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name="%(app_label)s_%(class)s_customer",
+    )
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.CASCADE,
+        related_name="%(app_label)s_%(class)s_warehouse",
+    )
+    biller = models.ForeignKey(
+        Biller, on_delete=models.CASCADE, related_name="%(app_label)s_%(class)s_biller"
+    )
+    product = models.ManyToManyField(Product)
+    sales_tax = models.CharField(choices=ORDER_TAX, max_length=10)
+    discount = models.FloatField()
+    shipping = models.FloatField()
+    sales_status = models.CharField(choices=SALE_STATUS, max_length=15)
+    payment_status = models.CharField(choices=SALE_STATUS, max_length=15)
+    sales_image = models.ImageField(upload_to="sales/", blank=True, null=True)
+    sales_note = models.TextField()
+    staff_remark = models.TextField()
+
+
+class Adjustment(CommonInfo):
+    warehouse = models.OneToOneField(
+        Warehouse,
+        on_delete=models.CASCADE,
+    )
+    image = models.ImageField(upload_to='adjustment_images/', null=True, blank=True)
+
+    
+    def __str__(self):
+        return self.warehouse.name
+    
+    
+
+class AdjustmentItems(CommonInfo):
+    adjustment = models.ForeignKey(
+        Adjustment,
+        on_delete=models.CASCADE,
+        related_name="%(app_label)s_%(class)s_adjustment",
+    )
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="%(app_label)s_%(class)s_product",
+    )
+    type = models.CharField(max_length=20, choices=TYPE, default=TYPE[0][0])
+    
+    
+class Invoice(CommonInfo):
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="%(app_label)s_%(class)s_warehouse",
+    )
+    supplier = models.ForeignKey(
+        Supplier,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="%(app_label)s_%(class)s_supplier",
+    )
+
+    class Meta:
+        abstract = True
+
+
+class PurchaseInvoice(Invoice):
+    purchases = models.OneToOneField(
+        Purchase, on_delete=models.SET_NULL, null=True, blank=True
+    )
+
+
+
+class SalesInvoice(Invoice):
+    sales = models.OneToOneField(
+        Sales, on_delete=models.SET_NULL, null=True, blank=True
+    )
+
+
