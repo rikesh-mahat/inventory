@@ -1,6 +1,18 @@
 from django.shortcuts import render
 from rest_framework.viewsets import ModelViewSet
-from apps.products.models import Brand, Category, Product, Unit
+from apps.products.models import (
+    Brand,
+    Sales,
+    Category,
+    Product,
+    Purchase,
+    Unit,
+    PurchaseInvoice,
+    SalesInvoice,
+    Adjustment,
+    AdjustmentItems,
+)
+
 from apps.products.serializers import (
     BrandSerializers,
     CategorySerializer,
@@ -11,6 +23,13 @@ from apps.products.serializers import (
     GetCategorySeralizer,
     GetUnitSeralizer,
     GetBrandSeralizer,
+    PurchaseSerializer,
+    SalesSerializer,
+    GetPurchaseSerializer,
+    PurchaseInvoiceSerializer,
+    SalesInvoiceSerializer,
+    AdjustmentSerializer,
+    AdjustmentItemsSerializer,
 )
 from apps.accounts.serializers import UserSerializer
 from rest_framework import serializers
@@ -22,13 +41,14 @@ from rest_framework.response import Response
 from rest_framework import status
 from utils.permissions import SupplierPermission
 from rest_framework.permissions import (
-    BasePermission,
     AllowAny,
     IsAdminUser,
     IsAuthenticated,
 )
 
 from apps.store.models import Warehouse
+from apps.products.models import Barcode
+
 # Create your views here.
 
 
@@ -103,8 +123,9 @@ class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     http_method_names = ["get", "post", "put", "patch", "delete"]
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ["created_by"]
+    search_fields = ["product_name"]
     permission_classes_by_action = {
         "list": [AllowAny],
         "retrieve": [IsAuthenticated],
@@ -125,32 +146,171 @@ class ProductViewSet(ModelViewSet):
         if self.action == "retrieve":
             return GETProductSerializer
         return super().get_serializer_class()
-    
-    
-   
-        
+
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
-        
-        # getting the warehouse from the request data
         warehouse_data = request.data.pop("warehouse")
-        warehouse_ids_list = []  # for storing the id of the warehouses
-        
-        # loop throught the warehouses 
+        warehouse_ids_list = []
         for warehouse in warehouse_data:
-            # create an warehouse if id isn't passed or update an warehouse if id is passed
-            warehouse_instance, created = Warehouse.objects.update_or_create(id = warehouse.get('id'),defaults=warehouse)
-            
-            # append the created or updated warehouse id in our list
+            warehouse_instance = Warehouse.objects.get(id=warehouse)
             warehouse_ids_list.append(warehouse_instance.id)
-            
-        # finally set the ids of the warehouse in our manytomany field relatioship
         instance.warehouse.set(warehouse_ids_list)
         serializer = ProductSerializer(instance)
-        
-        return Response({"updated data" : serializer.data})
 
+        return Response({"updated data": serializer.data})
 
 
 class BarcodeViewset(ModelViewSet):
-    pass
+    queryset = Barcode.objects.all()
+    serializer_class = BarcodeSerializer
+
+
+class PurchaseViewSet(ModelViewSet):
+    queryset = Purchase.objects.all()
+    serializer_class = PurchaseSerializer
+
+    permission_classes_by_action = {
+        "list": [AllowAny],
+        "retrieve": [SupplierPermission],
+        "create": [SupplierPermission],
+        "update": [SupplierPermission],
+        "destroy": [SupplierPermission],
+    }
+
+    def get_permissions(self):
+        try:
+            return [
+                permission()
+                for permission in self.permission_classes_by_action[self.action]
+            ]
+        except:
+            return [permission() for permission in self.permission_classes]
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return GetPurchaseSerializer
+        return super().get_serializer_class()
+
+
+class SalesViewSet(ModelViewSet):
+    queryset = Sales.objects.all()
+    serializer_class = SalesSerializer
+    permission_classes_by_action = {
+        "list": [AllowAny],
+        "retrieve": [IsAuthenticated],
+        "create": [IsAdminUser],
+        "update": [IsAdminUser],
+        "destroy": [IsAdminUser],
+    }
+
+    def get_permissions(self):
+        try:
+            return [
+                permission()
+                for permission in self.permission_classes_by_action[self.action]
+            ]
+        except:
+            return [permission() for permission in self.permission_classes]
+
+
+class PurchaseInvoiceViewSet(ModelViewSet):
+    queryset = PurchaseInvoice.objects.all()
+    serializer_class = PurchaseInvoiceSerializer
+
+    permission_classes_by_action = {
+        "list": [AllowAny],
+        "retrieve": [IsAuthenticated],
+        "create": [IsAdminUser],
+        "update": [IsAdminUser],
+        "destroy": [IsAdminUser],
+    }
+
+    def get_permissions(self):
+        try:
+            return [
+                permission()
+                for permission in self.permission_classes_by_action[self.action]
+            ]
+        except:
+            return [permission() for permission in self.permission_classes]
+
+
+class SalesInvoiceViewSet(ModelViewSet):
+    queryset = SalesInvoice.objects.all()
+    serializer_class = SalesInvoiceSerializer
+
+    permission_classes_by_action = {
+        "list": [AllowAny],
+        "retrieve": [IsAuthenticated],
+        "create": [IsAdminUser],
+        "update": [IsAdminUser],
+        "destroy": [IsAdminUser],
+    }
+
+    def get_permissions(self):
+        try:
+            return [
+                permission()
+                for permission in self.permission_classes_by_action[self.action]
+            ]
+        except:
+            return [permission() for permission in self.permission_classes]
+
+
+class AdjustmentViewSet(ModelViewSet):
+    queryset = Adjustment.objects.all()
+    serializer_class = AdjustmentSerializer
+    permission_classes_by_action = {
+        "list": [AllowAny],
+        "retrieve": [IsAuthenticated],
+        "create": [IsAdminUser],
+        "update": [IsAdminUser],
+        "destroy": [IsAdminUser],
+    }
+
+    def create(self, request):
+        serializer = AdjustmentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        warehouse = serializer.validated_data.pop("warehouse")
+        adjustment = Adjustment.objects.create(
+            warehouse=warehouse, **serializer.validated_data
+        )
+        serializer = AdjustmentSerializer(adjustment)
+        return Response({"success": "ok", "data": serializer.data})
+
+    def get_permissions(self):
+        try:
+            return [
+                permission()
+                for permission in self.permission_classes_by_action[self.action]
+            ]
+        except:
+            return [permission() for permission in self.permission_classes]
+
+
+class AdjustmentItemsViewSet(ModelViewSet):
+    queryset = AdjustmentItems.objects.all()
+    serializer_class = AdjustmentItemsSerializer
+    permission_classes_by_action = {
+        "list": [AllowAny],
+        "retrieve": [IsAuthenticated],
+        "create": [IsAdminUser],
+        "update": [IsAdminUser],
+        "destroy": [IsAdminUser],
+    }
+
+    def create(self, request):
+        serializer = AdjustmentItemsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        adjustment = AdjustmentItems.objects.create(**serializer.validated_data)
+        serializer = AdjustmentItemsSerializer(adjustment)
+        return Response({"data": serializer.data})
+
+    def get_permissions(self):
+        try:
+            return [
+                permission()
+                for permission in self.permission_classes_by_action[self.action]
+            ]
+        except:
+            return [permission() for permission in self.permission_classes]
