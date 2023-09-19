@@ -76,7 +76,6 @@ class CustomerViewSet(CommonModelViewset):
 class SupplierViewSet(CommonModelViewset):
     queryset = Supplier.objects.all()
     serializer_class = SupplierSerializer
-    permission_classes = [SupplierPermission]
 
     def get_serializer_class(self):
         if self.action == "list":
