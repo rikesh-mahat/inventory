@@ -20,8 +20,9 @@ from utils.models import (
 
 import uuid
 
+
 class User(AbstractUser):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4,editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     full_name = models.CharField(max_length=100)
     phone = models.CharField(
         max_length=15, null=False, unique=True, validators=[validate_mobile_number]
@@ -31,29 +32,30 @@ class User(AbstractUser):
         max_length=10,
         choices=GENDER_CHOICES,
     )
-    username = models.CharField(max_length=150,
-                                unique=True,)
+    username = models.CharField(
+        max_length=150,
+        unique=True,
+    )
     role = models.CharField(
         max_length=20,
         choices=ROLE_CHOICES,
     )
-    profile_image = models.ImageField(
-        upload_to="profile/", blank=True, null=True)
+    profile_image = models.ImageField(upload_to="profile/", blank=True, null=True)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["full_name", "username", "phone", ]
-    
+    REQUIRED_FIELDS = [
+        "full_name",
+        "username",
+        "phone",
+    ]
+
     objects = CustomUserManager()
 
     def __str__(self):
-        return self.email
+        return self.full_name
 
 
-
-        
-        
-        
-class Supplier(CommonInfo,Address):
+class Supplier(CommonInfo, Address):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
     supplier_code = models.IntegerField()
     company = models.CharField(max_length=100)
@@ -62,32 +64,20 @@ class Supplier(CommonInfo,Address):
         return self.user.full_name
 
 
-class Customer(CommonInfo,Address):
+class Customer(CommonInfo, Address):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
     supplier_name = models.ForeignKey(
         Supplier,
         on_delete=models.CASCADE,
     )
-    customer_group = models.CharField(
-        max_length=10, choices=CUSTOMER_GROUP_CHOICES)
+    customer_group = models.CharField(max_length=10, choices=CUSTOMER_GROUP_CHOICES)
     reward_point = models.IntegerField(default=0)
 
     def __str__(self):
-        return self.created_by.full_name
+        return self.user.full_name
 
 
-# class Warehouse(models.Model):
-#     name = models.CharField(max_length=100, blank=True, null=True)
-#     phone = models.CharField(
-#         max_length=15, null=False, unique=True, validators=[validate_mobile_number]
-#     )
-#     email = models.EmailField(unique=True)
-
-#     def __str__(self):
-#         return self.name
-
-
-class Biller(CommonInfo, Address, OTP):
+class Biller(CommonInfo, Address):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
     NID = models.CharField(max_length=13)
     warehouse = models.ForeignKey(
@@ -105,9 +95,3 @@ class OTP(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     otp = models.CharField(max_length=8)
     created_at = models.DateTimeField(auto_now=True)
-    
-    
-
-
-
-    
