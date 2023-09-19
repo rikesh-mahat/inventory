@@ -52,35 +52,51 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
-class SupplierSerializer(serializers.ModelSerializer):
 
+class SupplierOnlyListSerializer(serializers.PrimaryKeyRelatedField):
+    queryset = User.objects.filter(role = "Supplier")
+    
+class SupplierSerializer(serializers.ModelSerializer):
+    user = SupplierOnlyListSerializer(write_only = True)
     class Meta:
         model = Supplier
-        fields = (
+        fields = [
+            "id",
+            "user",
             "supplier_code",
             "company",
-        )
+        ]
 
-
+class CustomerOnlyList(serializers.PrimaryKeyRelatedField):
+    queryset = User.objects.filter(role = "Customer")
+    
 class CustomerSerializer(serializers.ModelSerializer):
+    user = CustomerOnlyList(write_only = True)
+    
     class Meta:
         model = Customer
-        fields = (
+        fields = [
+            "id",
+            "user",
             "supplier_name",
             "customer_group",
             "reward_point",
-        )
+        ]
 
-
+class BillerListOnly(serializers.PrimaryKeyRelatedField):
+    queryset = User.objects.filter(role = "Biller")
+    
 class BillerSerializer(serializers.ModelSerializer):
+    user = BillerListOnly(write_only = True)
     class Meta:
         model = Biller
-        fields = (
+        fields = [
             "id",
+            "user",
             "NID",
             "warehouse",
             "biller_code"
-        )
+        ]
 
 
 class WarehouseSerializer(serializers.ModelSerializer):
@@ -174,10 +190,8 @@ class ForgotPasswordSerializer(serializers.ModelSerializer):
         fields = ['otp', 'password', 'password1']
         
     def validate_otp(self, value):
-        otp = self.context['otp']
         totp = pyotp.TOTP(config('TOTP_SECRET_KEY'))
-        
-        if not totp.verify(otp):
+        if not totp.verify(value):
             raise serializers.ValidationError("The otp has expired")
         if  otp.otp!= value:
             raise serializers.ValidationError("otp doesn't match")
@@ -189,7 +203,5 @@ class ForgotPasswordSerializer(serializers.ModelSerializer):
         return data
     
     
-# class OTPSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = OTP
-#         fields = ['user', 'otp', 'created_at']
+    
+    
