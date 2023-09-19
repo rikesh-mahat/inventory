@@ -15,7 +15,3 @@ class RequestMiddleware:
 
     def process_exception(self, request, exception):
         request_local.request = None
-
-    def process_template_response(self, request, response):
-        request_local.request = None
-        return response
