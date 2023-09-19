@@ -11,19 +11,4 @@ class WarehouseSerializer(serializers.ModelSerializer):
                   'email',
                   'country',
                   'city')
-
-# class GetWarehouseSeralizer(serializers.ModelSerializer):
-#     created_by = UserSerializer()
-#     modified_by = UserSerializer()
-
-#     class Meta:
-#         model = Warehouse
-#         fields = (
-#             "created_by",
-#             "modified_by",
-#             "name",
-#             "phone",
-#             "email",
-#             "country",
-#             "city"
-#         )
+    
