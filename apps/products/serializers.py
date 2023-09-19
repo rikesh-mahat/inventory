@@ -1,14 +1,34 @@
 from rest_framework import serializers
-from apps.products.models import Brand, Category, Product, Unit, Barcode
-from apps.accounts.serializers import UserSerializer
+from apps.products.models import (
+    Brand,
+    Sales,
+    Category,
+    Product,
+    Unit,
+    Barcode,
+    Purchase,
+    Adjustment,
+    AdjustmentItems,
+    Invoice,
+    PurchaseInvoice,
+    SalesInvoice,
+)
+from apps.accounts.serializers import (
+    UserSerializer,
+    SupplierSerializer,
+    BillerSerializer,
+    CustomerSerializer,
+)
 from apps.store.serializers import WarehouseSerializer
 from apps.store.models import Warehouse
+from apps.accounts.models import Supplier
 
 
 class BrandSerializers(serializers.ModelSerializer):
     class Meta:
         model = Brand
         fields = (
+            "id",
             "brand_name",
             "brand_image",
         )
@@ -30,12 +50,10 @@ class CategorySerializer(serializers.ModelSerializer):
 class UnitSerializer(serializers.ModelSerializer):
     class Meta:
         model = Unit
-        fields = ("unit_name", "short_name")
+        fields = ("id", "unit_name", "short_name")
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    warehouse = WarehouseSerializer(many=True, read_only=False)
-
     class Meta:
         model = Product
         fields = (
@@ -53,10 +71,10 @@ class ProductSerializer(serializers.ModelSerializer):
             "product_tax",
             "tax_method",
             "discount",
+            "warehouse",
             "stock_alert",
             "product_image",
             "featured",
-            "warehouse",
             "price_difference_in_warehouse",
             "has_expiry_date",
             "add_promotional_sale",
@@ -65,24 +83,19 @@ class ProductSerializer(serializers.ModelSerializer):
         )
 
     def create(self, validated_data):
-        warehouses_data = validated_data.pop("warehouse")
-        product = Product.objects.create(**validated_data)
+        warehouse_data = validated_data.pop("warehouse", [])  # Extract warehouse data
 
-        for warehouse_data in warehouses_data:
-            warehouses, created = Warehouse.objects.get_or_create(**warehouse_data)
-            product.warehouse.add(warehouses)
+        product = Product.objects.create(**validated_data)
+        for warehouse_info in warehouse_data:
+            warehouse_id = warehouse_info.id
+
+            try:
+                warehouse_obj = Warehouse.objects.get(id=warehouse_id)
+                product.warehouse.add(warehouse_obj)
+            except Warehouse.DoesNotExist:
+                pass
 
         return product
-
-    def update(self, instance, validated_data):
-        warehouse_ids = validated_data.pop('warehouse', None)
-        import pdb
-        pdb.set_trace()
-        if warehouse_ids:
-            product = Product.objects.get(id=validated_data.get("id"))
-            instance.warehouse.add(warehouse_ids)
-
-        return super().update(instance, validated_data)
 
 
 class BarcodeSerializer(serializers.ModelSerializer):
@@ -98,6 +111,7 @@ class GETProductSerializer(serializers.ModelSerializer):
     created_by = UserSerializer()
     modified_by = UserSerializer()
     user = UserSerializer()
+    warehouse = WarehouseSerializer(many=True)
 
     class Meta:
         model = Product
@@ -139,3 +153,109 @@ class GetBrandSeralizer(serializers.ModelSerializer):
             "brand_name",
             "brand_image",
         )
+
+
+class PurchaseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Purchase
+        fields = [
+            "id",
+            "warehouse",
+            "supplier",
+            "product",
+            "order_tax",
+            "order_discount",
+            "shipping",
+            "sales_status",
+            "purchase_note",
+        ]
+
+
+class GetPurchaseSerializer(serializers.ModelSerializer):
+    warehouse = WarehouseSerializer()
+    supplier = SupplierSerializer()
+    product = ProductSerializer(many=True)
+
+    class Meta:
+        model = Purchase
+        fields = [
+            "id",
+            "warehouse",
+            "supplier",
+            "product",
+            "order_tax",
+            "order_discount",
+            "shipping",
+            "sales_status",
+            "purchase_note",
+        ]
+
+
+class SalesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sales
+        fields = [
+            "id",
+            "customer",
+            "warehouse",
+            "biller",
+            "product",
+            "sales_tax",
+            "discount",
+            "shipping",
+            "sales_status",
+            "payment_status",
+            "sales_image",
+            "sales_note",
+            "staff_remark",
+        ]
+
+
+class PurchaseInvoiceSerializer(serializers.ModelSerializer):
+    
+    purchases = PurchaseSerializer(many=True)
+    
+    class Meta:
+        model = PurchaseInvoice
+        fields = ['id', 'purchases']
+    
+class SalesInvoiceSerializer(serializers.ModelSerializer):
+    
+    sales = SalesSerializer(many=True)
+    
+    class Meta:
+        model = SalesInvoice
+        fields = ['id', 'sales']
+        
+        
+class AdjustmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Adjustment
+        fields = ["id", "warehouse", "image"]
+
+
+class AdjustmentItemsSerializer(serializers.ModelSerializer):
+    quantity = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        model = AdjustmentItems
+        fields = ["id", "adjustment", "product", "quantity", "type"]
+
+    def validate(self, data):
+        product = data.get("product")
+        type = data.get("type")
+        quantity = data.pop("quantity")
+        if type == "Subtraction" and product.stock_alert < quantity:
+            raise serializers.ValidationError(
+                {product.product_name: "Quantity is greater than stock"}
+            )
+        elif type == "Addition":
+            product.stock_alert += int(quantity)
+        else:
+            product.stock_alert -= int(quantity)
+        product.save()
+
+        return data
+
+
+
