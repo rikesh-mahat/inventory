@@ -20,6 +20,7 @@ from apps.products.serializers import (
     GETProductSerializer,
     UnitSerializer,
     BarcodeSerializer,
+    GETBarcodeSerializer,
     GetCategorySeralizer,
     GetUnitSeralizer,
     GetBrandSeralizer,
@@ -45,9 +46,17 @@ from rest_framework.permissions import (
     IsAdminUser,
     IsAuthenticated,
 )
+from django.shortcuts import get_object_or_404
 
 from apps.store.models import Warehouse
 from apps.products.models import Barcode
+
+import barcode
+from PIL import Image
+from io import BytesIO
+import uuid
+import os
+from barcode.writer import ImageWriter
 
 # Create your views here.
 
@@ -147,22 +156,41 @@ class ProductViewSet(ModelViewSet):
             return GETProductSerializer
         return super().get_serializer_class()
 
-    def partial_update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        warehouse_data = request.data.pop("warehouse")
-        warehouse_ids_list = []
-        for warehouse in warehouse_data:
-            warehouse_instance = Warehouse.objects.get(id=warehouse)
-            warehouse_ids_list.append(warehouse_instance.id)
-        instance.warehouse.set(warehouse_ids_list)
-        serializer = ProductSerializer(instance)
-
-        return Response({"updated data": serializer.data})
-
 
 class BarcodeViewset(ModelViewSet):
     queryset = Barcode.objects.all()
     serializer_class = BarcodeSerializer
+
+    def create(self, request, *args, **kwargs):
+        product_infromation = request.data.get("information")
+        get_current_product = Product.objects.get(id=product_infromation)
+        get_current_product_code = str(get_current_product.product_code)
+        if not get_current_product_code:
+            # print(product_infromation.product_code)
+            return Response(
+                {"error": "Product code is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        barcode_class = barcode.get_barcode_class("code128")
+        code = barcode_class(get_current_product_code, writer=ImageWriter())
+
+        unique_filename = f"barcode_{uuid.uuid4()}"
+
+        directory_path = "barcode-image/"
+        if not os.path.exists(directory_path):
+            os.makedirs(directory_path)
+        barcode_image = code.save(f"barcode-image/{unique_filename}")
+
+        serializer = BarcodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(barcode_image=barcode_image)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return GETBarcodeSerializer
+        return super().get_serializer_class()
 
 
 class PurchaseViewSet(ModelViewSet):
