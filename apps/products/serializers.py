@@ -101,8 +101,14 @@ class ProductSerializer(serializers.ModelSerializer):
 class BarcodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Barcode
-        fields = ("information", "papersize")
+        fields = [ "id", "information", "papersize"]
 
+
+class GETBarcodeSerializer(serializers.ModelSerializer):
+    information = ProductSerializer()
+    class Meta:
+        model = Barcode
+        fields = ['id', 'information', 'papersize']
 
 class GETProductSerializer(serializers.ModelSerializer):
     brand = BrandSerializers()
