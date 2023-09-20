@@ -29,7 +29,6 @@ class UserSerializer(serializers.ModelSerializer):
             "password2",
             "gender",
             "username",
-            "role",
         )
         
 
@@ -53,11 +52,10 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 
-class SupplierOnlyListSerializer(serializers.PrimaryKeyRelatedField):
-    queryset = User.objects.filter(role = "Supplier")
+
     
 class SupplierSerializer(serializers.ModelSerializer):
-    user = SupplierOnlyListSerializer(write_only = True)
+    user = UserSerializer(read_only=True)
     class Meta:
         model = Supplier
         fields = [
@@ -67,11 +65,10 @@ class SupplierSerializer(serializers.ModelSerializer):
             "company",
         ]
 
-class CustomerOnlyList(serializers.PrimaryKeyRelatedField):
-    queryset = User.objects.filter(role = "Customer")
+
     
 class CustomerSerializer(serializers.ModelSerializer):
-    user = CustomerOnlyList(write_only = True)
+    user = UserSerializer(read_only=True)
     
     class Meta:
         model = Customer
@@ -82,12 +79,13 @@ class CustomerSerializer(serializers.ModelSerializer):
             "customer_group",
             "reward_point",
         ]
+        
+    
 
-class BillerListOnly(serializers.PrimaryKeyRelatedField):
-    queryset = User.objects.filter(role = "Biller")
+
     
 class BillerSerializer(serializers.ModelSerializer):
-    user = BillerListOnly(write_only = True)
+    user = UserSerializer()
     class Meta:
         model = Biller
         fields = [
@@ -188,14 +186,7 @@ class ForgotPasswordSerializer(serializers.ModelSerializer):
     class Meta:
         model = OTP
         fields = ['otp', 'password', 'password1']
-        
-    def validate_otp(self, value):
-        totp = pyotp.TOTP(config('TOTP_SECRET_KEY'))
-        if not totp.verify(value):
-            raise serializers.ValidationError("The otp has expired")
-        if  otp.otp!= value:
-            raise serializers.ValidationError("otp doesn't match")
-        return value
+    
     
     def validate(self, data):
         if data.get('password') != data.get('password1'):
@@ -203,5 +194,5 @@ class ForgotPasswordSerializer(serializers.ModelSerializer):
         return data
     
     
-    
+
     
