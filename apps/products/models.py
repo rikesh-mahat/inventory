@@ -49,7 +49,7 @@ class Product(CommonInfo):
     )
     product_code = models.IntegerField()
     brand = models.ForeignKey(Brand, on_delete=models.CASCADE, related_name="brand")
-    barcode = models.CharField(max_length=100)
+    barcode = models.CharField(max_length=16)
     product_unit = models.ForeignKey(
         Unit, on_delete=models.CASCADE, related_name="product_unit"
     )
@@ -87,7 +87,8 @@ class Barcode(CommonInfo):
         Product, on_delete=models.CASCADE, related_name="barcode_info"
     )
     papersize = models.CharField(choices=BARCODE_PAPER_SIZE, max_length=20)
-
+    barcode_image = models.ImageField(upload_to="barcode-image/", blank=True, null=True)
+    
 
 class Purchase(CommonInfo):
     warehouse = models.ForeignKey(
