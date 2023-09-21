@@ -85,7 +85,7 @@ class CustomerSerializer(serializers.ModelSerializer):
 
     
 class BillerSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
+    user = UserSerializer(read_only=True)
     class Meta:
         model = Biller
         fields = [
