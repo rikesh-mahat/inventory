@@ -41,10 +41,24 @@ class CommonModelViewset(ModelViewSet):
 class UserViewSet(CommonModelViewset):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-
     search_fields = ["full_name", "phone"]
     ordering_fields = ["full_name"]
-    permission_classes = [IsAdminUser]
+    permission_classes_by_action = {
+        "list": [AllowAny],
+        "retrieve": [IsAuthenticated],
+        "create": [AllowAny],
+        "update": [IsAdminUser],
+        "destroy": [IsAdminUser],
+    }
+    
+    def get_permissions(self):
+        try:
+            return [
+                permission()
+                for permission in self.permission_classes_by_action[self.action]
+            ]
+        except:
+            return [permission() for permission in self.permission_classes]
 
     def get_serializer_class(self):
         if self.action == "reset_password":
@@ -55,9 +69,11 @@ class UserViewSet(CommonModelViewset):
         methods=["POST"],
         detail=True,
         url_path="reset-password",
-        permission_classes=[IsAuthenticated],
     )
     def reset_password(self, request, pk=None):
+        '''
+            for updating the user password once the user logs In 
+        '''
         serializers = ChangePasswordSerializer(
             request.user, data=request.data, context={"request": request}
         )
@@ -73,6 +89,11 @@ class UserViewSet(CommonModelViewset):
 
     @action(methods=["POST"], url_path="forgot-password", detail=False)
     def forgot_password(self, request):
+        
+        '''
+            for changing the user password via otp request
+        '''
+        
         # using email serializer to validate the user password
         email_serializer = EmailSerializer(data=request.data)
         email_serializer.is_valid(raise_exception=True)
@@ -103,9 +124,13 @@ class UserViewSet(CommonModelViewset):
         methods=["POST"],
         detail=False,
         url_path="change-password",
-        permission_classes=[AllowAny],
     )
     def change_password(self, request):
+        
+        '''
+            for changing the user password after getting the otp
+        '''
+        
         # getting the otp and its user
         pk = request.data.get("otp")
         user_otp = OTP.objects.filter(otp=pk).first()
@@ -148,7 +173,6 @@ class CustomerViewSet(CommonModelViewset):
         user_data = request.data.pop("user")
         user_serializer = UserSerializer(data=user_data)
         user_serializer.is_valid(raise_exception=True)
-        
 
         # # getting the remaining customer info
         customer_data = request.data
@@ -161,7 +185,6 @@ class CustomerViewSet(CommonModelViewset):
         return Response(
             {"data": customer_serializer.data}, status=status.HTTP_201_CREATED
         )
-        
 
     def get_permissions(self):
         try:
@@ -240,9 +263,7 @@ class BillerViewSet(CommonModelViewset):
         # validate supplier data and then only save the user and the supplier
         biller_serializer.is_valid(raise_exception=True)
         user = user_serializer.save()
-        biller_serializer.save(
-            user=user, supplier_code=f"SC-{Biller.objects.count()}"
-        )
+        biller_serializer.save(user=user, supplier_code=f"SC-{Biller.objects.count()}")
         return Response(
             {"data": biller_serializer.data}, status=status.HTTP_201_CREATED
         )
@@ -255,8 +276,6 @@ class BillerViewSet(CommonModelViewset):
             ]
         except:
             return [permission() for permission in self.permission_classes]
-
-    
 
 
 class WarehouseViewSet(CommonModelViewset):
